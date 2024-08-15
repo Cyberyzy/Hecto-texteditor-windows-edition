@@ -9,6 +9,6 @@ Some tiny changes:
 
 - **Line Number Display:** The text editor now prominently displays line numbers on the left-hand side.
 - **Enter Key Support:** Full support for the "Enter" key has been implemented.
-- **Mouse Support:** Todo!
+- **Mouse Click Support:** Todo!
 
 I decide to translate the tutorial into Chinese. Check the progress at [here](https://cyberyzy.github.io/)!
