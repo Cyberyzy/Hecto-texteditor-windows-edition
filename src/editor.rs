@@ -9,7 +9,7 @@ use std::time::Instant;
 // use crossterm::event:：{Event,read}
 use crossterm::{
     style::{Color, ResetColor, SetForegroundColor},
-    event::{KeyCode, KeyModifiers, KeyEvent},
+    event::{self,Event,KeyCode, KeyModifiers, KeyEvent, MouseEventKind, MouseEvent},
 };
 use std::io::{self, Write};
 
@@ -71,6 +71,14 @@ impl Editor {
             if let Err(error) = self.process_keypress() {
                 die(error);
             }
+            // if let Ok(event) = event::read() {
+            //     match event {
+            //         Event::Mouse(mouse_event) => {
+            //             self.handle_mouse_event(mouse_event);
+            //         }
+            //         _ => {}
+            //     }
+            // }
         }
     }
     pub fn default() -> Self {
@@ -101,6 +109,17 @@ impl Editor {
             highlighted_word: None,
         }
     }
+
+    // fn handle_mouse_event(&mut self, mouse_event: MouseEvent) {
+    //     match mouse_event.kind {
+    //         MouseEventKind::Down(_) => {
+    //             let (x, y) = (mouse_event.column, mouse_event.row);
+    //             self.cursor_position.x = x as usize;
+    //             self.cursor_position.y = y as usize;
+    //         }
+    //         _ => {}
+    //     }
+    // }
 
     fn refresh_screen(&mut self) -> Result<(), std::io::Error> {
         Terminal::cursor_hide();
@@ -221,6 +240,11 @@ impl Editor {
                 modifiers: KeyModifiers::NONE,
             } => {
                 self.document.insert(&self.cursor_position, c);
+                if self.cursor_position.x >= 10 {
+                    self.document.insert(&self.cursor_position, '\n');
+                    self.cursor_position.x = 0;
+                    self.cursor_position.y += 1;
+                }
                 self.move_cursor(KeyCode::Right);
             }
             KeyEvent {
