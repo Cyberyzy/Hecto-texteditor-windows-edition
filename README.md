@@ -8,7 +8,8 @@ Many thanks to Philipp for his excellent tutorial! This small project serves as 
 Some tiny changes:
 
 - **Line Number Display:** The text editor now prominently displays line numbers on the left-hand side.
-- **Enter Key Support:** Full support for the "Enter" key has been implemented.
+- **Hard-wrap line and soft-wrap line:** Full support for the "Enter" key has been implemented.
+- 
 - **Mouse Click Support:** Todo!
 
 I decide to translate the tutorial into Chinese. Check the progress at [here](https://cyberyzy.github.io/)!
