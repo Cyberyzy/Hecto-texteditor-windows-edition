@@ -9,7 +9,8 @@ use std::time::Instant;
 // use crossterm::event:：{Event,read}
 use crossterm::{
     style::{Color, ResetColor, SetForegroundColor},
-    event::{self,Event,KeyCode, KeyModifiers, KeyEvent, MouseEventKind, MouseEvent},
+    event::{self,Event,KeyCode, KeyModifiers, KeyEvent, MouseEventKind, MouseButton, MouseEvent},
+    ExecutableCommand,
 };
 use std::io::{self, Write};
 
@@ -17,6 +18,7 @@ const STATUS_FG_COLOR: Color = Color::Rgb { r: 63, g: 63, b: 63 };
 const STATUS_BG_COLOR: Color = Color::Rgb { r: 239, g: 239, b: 239 };
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const QUIT_TIMES: u8 = 3;
+const MAX_LINE_LEN: usize = 50;
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum SearchDirection {
@@ -61,6 +63,8 @@ pub struct Editor {
 
 impl Editor {
     pub fn run(&mut self) {
+        std::io::stdout().execute(crossterm::event::EnableMouseCapture).unwrap();
+        
         loop {
             if let Err(error) = self.refresh_screen() {
                 die(error);
@@ -71,13 +75,8 @@ impl Editor {
             if let Err(error) = self.process_keypress() {
                 die(error);
             }
-            // if let Ok(event) = event::read() {
-            //     match event {
-            //         Event::Mouse(mouse_event) => {
-            //             self.handle_mouse_event(mouse_event);
-            //         }
-            //         _ => {}
-            //     }
+            // if let Err(error) = self.process_mousepress() {
+            //     die(error);
             // }
         }
     }
@@ -210,52 +209,168 @@ impl Editor {
         self.highlighted_word = None;
     }
 
+    // fn process_mousepress(&mut self) -> Result<(), std::io::Error> {
+    //     let mouse_event = Terminal::read_mouse()?;
+    //     match mouse_event.kind {
+    //         MouseEventKind::Down(MouseButton::Left) => {
+    //             self.cursor_position = Position {
+    //                 x: mouse_event.column as usize,
+    //                 y: mouse_event.row as usize,
+    //             };
+    //             self.scroll();
+    //         }
+    //         _ => (), // 处理其他 MouseEventKind 的情况
+    //     }
+    //     Ok(())
+    // }
+    
+
+    // fn process_keypress(&mut self) -> Result<(), std::io::Error> {
+    //     let pressed_key = Terminal::read_key()?;
+    //     match pressed_key {
+    //         KeyEvent {
+    //             code: KeyCode::Char('q'),
+    //             modifiers: KeyModifiers::CONTROL,
+    //         } => {
+    //             if self.quit_times > 0 && self.document.is_dirty() {
+    //                 self.status_message = StatusMessage::from(format!(
+    //                     "WARNING! File has unsaved changes. Press Ctrl-Q {} more times to quit.",
+    //                     self.quit_times
+    //                 ));
+    //                 self.quit_times -= 1;
+    //                 return Ok(());
+    //             }
+    //             self.should_quit = true
+    //         }
+    //         KeyEvent {
+    //             code: KeyCode::Char('s'),
+    //             modifiers: KeyModifiers::CONTROL,
+    //         } => self.save(),
+    //         KeyEvent {
+    //             code: KeyCode::Char('f'),
+    //             modifiers: KeyModifiers::CONTROL,
+    //         } => self.search(),
+    //         KeyEvent {
+    //             code: KeyCode::Char(c),
+    //             modifiers: KeyModifiers::NONE,
+    //         } => {
+    //             self.document.insert(&self.cursor_position, c);
+    //             if self.cursor_position.x >= 50 {
+    //                 self.document.insert(&self.cursor_position, '\n');
+    //                 self.cursor_position.x = 0;
+    //                 self.cursor_position.y += 1;
+    //             }
+    //             self.move_cursor(KeyCode::Right);
+    //         }
+    //         KeyEvent {
+    //             code: KeyCode::Delete,
+    //             modifiers: KeyModifiers::NONE,
+    //         } => self.document.delete(&self.cursor_position),
+    //         KeyEvent {
+    //             code: KeyCode::Backspace,
+    //             modifiers: KeyModifiers::NONE,
+    //         } => {
+    //             if self.cursor_position.x > 0 || self.cursor_position.y > 0 {
+    //                 // self.move_cursor(KeyCode::Left);
+    //                 if self.cursor_position.x > 0 {
+    //                     self.cursor_position.x -= 1;
+    //                 } else {
+    //                     self.cursor_position.y -= 1;
+    //                     self.cursor_position.x = self.document.row(self.cursor_position.y).expect("REASON").len();
+    //                 }
+    //                 self.document.delete(&self.cursor_position);
+    //             }
+    //         }
+    //         KeyEvent {
+    //             code: KeyCode::Up
+    //             | KeyCode::Down
+    //             | KeyCode::Left
+    //             | KeyCode::Right
+    //             | KeyCode::PageUp
+    //             | KeyCode::PageDown
+    //             | KeyCode::End
+    //             | KeyCode::Enter
+    //             | KeyCode::Home,
+    //             modifiers: KeyModifiers::NONE,
+    //         } => self.move_cursor(pressed_key.code),
+    //         _ => (),
+    //     }
+    //     self.scroll();
+    //     if self.quit_times < QUIT_TIMES {
+    //         self.quit_times = QUIT_TIMES;
+    //         self.status_message = StatusMessage::from(String::new());
+    //     }
+    //     Ok(())
+    // }
+
     fn process_keypress(&mut self) -> Result<(), std::io::Error> {
-        let pressed_key = Terminal::read_key()?;
-        match pressed_key {
-            KeyEvent {
-                code: KeyCode::Char('q'),
-                modifiers: KeyModifiers::CONTROL,
-            } => {
-                if self.quit_times > 0 && self.document.is_dirty() {
-                    self.status_message = StatusMessage::from(format!(
-                        "WARNING! File has unsaved changes. Press Ctrl-Q {} more times to quit.",
-                        self.quit_times
-                    ));
-                    self.quit_times -= 1;
-                    return Ok(());
+        let event = Terminal::read(&mut self.terminal)?;
+        if let Event::Mouse(mouse_event) = event {
+            match mouse_event.kind {
+                MouseEventKind::Down(MouseButton::Left) => {
+                    self.cursor_position = Position {
+                        x: mouse_event.column as usize,
+                        y: mouse_event.row as usize,
+                    };
+                    self.scroll();
                 }
-                self.should_quit = true
+                _ => (), // 处理其他 MouseEventKind 的情况
             }
-            KeyEvent {
-                code: KeyCode::Char('s'),
-                modifiers: KeyModifiers::CONTROL,
-            } => self.save(),
-            KeyEvent {
-                code: KeyCode::Char('f'),
-                modifiers: KeyModifiers::CONTROL,
-            } => self.search(),
-            KeyEvent {
-                code: KeyCode::Char(c),
-                modifiers: KeyModifiers::NONE,
-            } => {
-                self.document.insert(&self.cursor_position, c);
-                if self.cursor_position.x >= 10 {
+        }
+        if let Event::Key(pressed_key) = event {
+            match (pressed_key.modifiers, pressed_key.code) {
+                (KeyModifiers::CONTROL, KeyCode::Char('q')) | (_, KeyCode::Esc) => {
+                    if self.quit_times > 0 && self.document.is_dirty() {
+                        self.status_message = StatusMessage::from(format!(
+                            "WARNING! File has unsaved changes. Press Ctrl-Q {} more times to quit.",
+                            self.quit_times
+                        ));
+                        self.quit_times -= 1;
+                        return Ok(());
+                    }
+                    self.should_quit = true
+                }
+                (KeyModifiers::CONTROL, KeyCode::Char('s')) => self.save(),
+                (KeyModifiers::CONTROL, KeyCode::Char('f')) => self.search(),
+                (KeyModifiers::CONTROL, KeyCode::Char('l')) => {
+                    self.document.insert(&self.cursor_position, 'l');
+                    self.move_cursor(KeyCode::Right);
+                },
+                (KeyModifiers::CONTROL, KeyCode::Char('r')) => {
+                    self.document.insert(&self.cursor_position, 'r');
+                    self.move_cursor(KeyCode::Right);
+                },
+                (KeyModifiers::CONTROL, KeyCode::Char('*')) => {
+                    self.document.insert(&self.cursor_position, '*');
+                    self.move_cursor(KeyCode::Right);
+                },
+                (_, KeyCode::Enter) => {
                     self.document.insert(&self.cursor_position, '\n');
-                    self.cursor_position.x = 0;
-                    self.cursor_position.y += 1;
+                    self.move_cursor(KeyCode::Right);
+                },
+                (_, KeyCode::Char(mut c)) => {
+                    match c {
+                        'l' | 'r' => {
+                            c = 'w';
+                        },
+
+                        'L' | 'R' => {
+                            c = 'W';
+                        },
+                        _ => {}
+                    }
+
+                    self.document.insert(&self.cursor_position, c);
+                    if self.cursor_position.x >= MAX_LINE_LEN {
+                        self.document.insert(&self.cursor_position, '\n');
+                        self.cursor_position.x = 0;
+                        self.cursor_position.y += 1;
+                    }
+                    self.move_cursor(KeyCode::Right);
                 }
-                self.move_cursor(KeyCode::Right);
-            }
-            KeyEvent {
-                code: KeyCode::Delete,
-                modifiers: KeyModifiers::NONE,
-            } => self.document.delete(&self.cursor_position),
-            KeyEvent {
-                code: KeyCode::Backspace,
-                modifiers: KeyModifiers::NONE,
-            } => {
-                if self.cursor_position.x > 0 || self.cursor_position.y > 0 {
+                (_, KeyCode::Delete) => self.document.delete(&self.cursor_position),
+                (_, KeyCode::Backspace) => {
+                    if self.cursor_position.x > 0 || self.cursor_position.y > 0 {
                     // self.move_cursor(KeyCode::Left);
                     if self.cursor_position.x > 0 {
                         self.cursor_position.x -= 1;
@@ -265,26 +380,35 @@ impl Editor {
                     }
                     self.document.delete(&self.cursor_position);
                 }
+                },
+                (_, KeyCode::Up)
+                | (_, KeyCode::Down)
+                | (_, KeyCode::Left)
+                | (_, KeyCode::Right)
+                | (_, KeyCode::PageUp)
+                | (_, KeyCode::PageDown)
+                | (_, KeyCode::End)
+                | (_, KeyCode::Home) => self.move_cursor(pressed_key.code),
+                _ => (),
             }
-            KeyEvent {
-                code: KeyCode::Up
-                | KeyCode::Down
-                | KeyCode::Left
-                | KeyCode::Right
-                | KeyCode::PageUp
-                | KeyCode::PageDown
-                | KeyCode::End
-                | KeyCode::Enter
-                | KeyCode::Home,
-                modifiers: KeyModifiers::NONE,
-            } => self.move_cursor(pressed_key.code),
-            _ => (),
+            self.scroll();
+            if self.quit_times < QUIT_TIMES {
+                self.quit_times = QUIT_TIMES;
+                self.status_message = StatusMessage::from(String::new());
+            }
         }
-        self.scroll();
-        if self.quit_times < QUIT_TIMES {
-            self.quit_times = QUIT_TIMES;
-            self.status_message = StatusMessage::from(String::new());
-        }
+
+        // else if let Event::Resize(width, height) = event {
+        //     self.terminal.size.width = width;
+        //     if env::consts::OS == "windows" {
+        //         self.terminal.size.height = height - 1;
+        //     }
+        //     else {
+        //         self.terminal.size.height = height - 2;
+        //     }
+        // }
+
+
         Ok(())
     }
 
@@ -336,9 +460,9 @@ impl Editor {
             }
             KeyCode::Right => {
                 if x < self.document.row(y).map_or(0, |row| row.len()) {
-                    x += 1;
+                    x = x.saturating_add(1);
                 } else if y < height {
-                    y += 1;
+                    y = y.saturating_add(1);
                 }
             }
             KeyCode::PageUp => {
@@ -357,7 +481,7 @@ impl Editor {
             }
             KeyCode::Enter => {
                 if y < height {
-                    y += 1;
+                    y = y.saturating_add(1);
                 }
             }
             KeyCode::Home => x = 0,
@@ -391,12 +515,12 @@ impl Editor {
         // 重置颜色
         print!("{}", ResetColor);
         // 打印 Rust 螃蟹图案
-        let crab_art = r#"
-            _~^~^~_
-        \) /  o o  \ (/
-        '_   -   _'
-        / '-----' \
-        "#;
+        // let crab_art = r#"
+        //     _~^~^~_
+        // \) /  o o  \ (/
+        // '_   -   _'
+        // / '-----' \
+        // "#;
         // println!("{}", crab_art);
         io::stdout().flush().unwrap();
     }
