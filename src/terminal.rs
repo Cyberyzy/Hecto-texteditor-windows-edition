@@ -2,11 +2,12 @@ use crate::Position;
 use std::io::{self, stdout, Write};
 use crossterm::{
     cursor,
-    event::{self,KeyEvent},
+    event::{self, read, Event, KeyEvent, MouseEvent},
     execute,
     style::{Color, SetBackgroundColor, SetForegroundColor},
     terminal::{self, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
 };
+
 // use crossterm::event::KeyCode;
 use crossterm::terminal::Clear;
 
@@ -56,13 +57,36 @@ impl Terminal {
 
     pub fn read_key() -> Result<KeyEvent, std::io::Error> {
         loop {
-            if event::poll(std::time::Duration::from_millis(100))? {
+            if event::poll(std::time::Duration::from_millis(50))? {
                 if let event::Event::Key(key) = event::read()? {
                     return Ok(key);
                 }
+            
             }
         }
     }
+
+    
+    pub fn read(&mut self) -> Result<Event, std::io::Error> {
+        loop {
+            let event = read();
+
+            if let Ok(Event::Key(_)) = event {
+                // self.cycle_colors();
+            }
+            return event
+        }
+    }
+
+    // pub fn read_mouse() -> Result<MouseEvent, std::io::Error> {
+    //     loop {
+    //         if event::poll(std::time::Duration::from_millis(50))? {
+    //             if let event::Event::Mouse(mouse) = event::read()? {
+    //                 return Ok(mouse);
+    //             }
+    //         }
+    //     }
+    // }
 
     pub fn cursor_hide() {
         execute!(stdout(), cursor::Hide).unwrap();
