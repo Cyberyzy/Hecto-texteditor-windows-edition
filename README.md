@@ -9,7 +9,6 @@ Some tiny changes:
 
 - **Line Number Display:** The text editor now prominently displays line numbers on the left-hand side.
 - **Hard-wrap line and soft-wrap line:** Full support for the "Enter" key has been implemented.
-- 
-- **Mouse Click Support:** Todo!
+- **Mouse Click Support:**: Now you can use mouse click to move cursor.
 
 I decide to translate the tutorial into Chinese. Check the progress at [here](https://cyberyzy.github.io/)!
