@@ -7,6 +7,7 @@ use std::time::Instant;
 // use std::include_bytes;
 // use crossterm::style::Colors
 // use crossterm::event:：{Event,read}
+use console::style;
 use crossterm::{
     style::{Color, ResetColor, SetForegroundColor},
     event::{self,Event,KeyCode, KeyModifiers, KeyEvent, MouseEventKind, MouseButton, MouseEvent},
@@ -83,14 +84,14 @@ impl Editor {
     pub fn default() -> Self {
         let args: Vec<String> = env::args().collect();
         let mut initial_status =
-            String::from("HELP: Ctrl-F = find | Ctrl-S = save | Ctrl-Q = quit");
+            String::from(format!("[{}]: Ctrl-F = find | Ctrl-S = save | Ctrl-Q = quit", style("Help").cyan()));
 
         let document = if let Some(file_name) = args.get(1) {
             let doc = Document::open(file_name);
             if let Ok(doc) = doc {
                 doc
             } else {
-                initial_status = format!("ERR: Could not open file: {}", file_name);
+                initial_status = format!("[{}] Could not open file: {}",style("Error").red(), file_name);
                 Document::default()
             }
         } else {
@@ -99,7 +100,7 @@ impl Editor {
 
         Self {
             should_quit: false,
-            terminal: Terminal::default().expect("Failed to initialize terminal"),
+            terminal: Terminal::default().expect(&format!("[{}] Failed to initialize terminal", style("Error").red())),
             document,
             cursor_position: Position::default(),
             offset: Position::default(),
@@ -158,9 +159,9 @@ impl Editor {
         }
 
         if self.document.save().is_ok() {
-            self.status_message = StatusMessage::from("File saved successfully.".to_string());
+            self.status_message = StatusMessage::from(format!("[{}] File save successfully!", style("Success").green()));
         } else {
-            self.status_message = StatusMessage::from("Error writing file!".to_string());
+            self.status_message = StatusMessage::from(format!("[{}] Error writing file!", style("Error").red()));
         }
     }
 
@@ -312,7 +313,7 @@ impl Editor {
                         x: mouse_event.column as usize,
                         y: mouse_event.row as usize,
                     };
-                    self.scroll();
+                    // self.scroll();
                 }
                 _ => (), // 处理其他 MouseEventKind 的情况
             }
@@ -322,8 +323,8 @@ impl Editor {
                 (KeyModifiers::CONTROL, KeyCode::Char('q')) | (_, KeyCode::Esc) => {
                     if self.quit_times > 0 && self.document.is_dirty() {
                         self.status_message = StatusMessage::from(format!(
-                            "WARNING! File has unsaved changes. Press Ctrl-Q {} more times to quit.",
-                            self.quit_times
+                            "[{}] File has unsaved changes. Press Ctrl-Q {} more times to quit.",
+                            style("WARNING").red(),style(self.quit_times).cyan()
                         ));
                         self.quit_times -= 1;
                         return Ok(());
@@ -349,17 +350,6 @@ impl Editor {
                     self.move_cursor(KeyCode::Right);
                 },
                 (_, KeyCode::Char(mut c)) => {
-                    match c {
-                        'l' | 'r' => {
-                            c = 'w';
-                        },
-
-                        'L' | 'R' => {
-                            c = 'W';
-                        },
-                        _ => {}
-                    }
-
                     self.document.insert(&self.cursor_position, c);
                     if self.cursor_position.x >= MAX_LINE_LEN {
                         self.document.insert(&self.cursor_position, '\n');
@@ -442,6 +432,7 @@ impl Editor {
             
             KeyCode::Down => {
                 if y < height {
+                    self.document.insert(&self.cursor_position, '\n');
                     y = y.saturating_add(1);
                 }
             }
@@ -459,6 +450,7 @@ impl Editor {
                 }
             }
             KeyCode::Right => {
+                
                 if x < self.document.row(y).map_or(0, |row| row.len()) {
                     x = x.saturating_add(1);
                 } else if y < height {
@@ -501,19 +493,27 @@ impl Editor {
     }
 
     fn draw_welcome_message(&self) {
-        let mut welcome_message = format!("Hecto editor -- version {}", VERSION);
+        let mut welcome_message = format!(
+            "{}{}{}{}{} editor -- version {}",
+            style("H").red(),
+            style("e").yellow(),
+            style("c").green(),
+            style("t").blue(),
+            style("o").magenta(),
+            style(VERSION).cyan()
+        );
         let width = self.terminal.size().width as usize;
         let len = welcome_message.len();
         #[allow(clippy::integer_arithmetic, clippy::integer_division)]
         let padding = width.saturating_sub(len) / 2;
-        let spaces = " ".repeat(padding.saturating_sub(1));
-        welcome_message = format!("~{}{}", spaces, welcome_message);
+        let spaces = " ".repeat(padding);
+        welcome_message = format!("{}{}", spaces, welcome_message);
         welcome_message.truncate(width);
         // 设置颜色
-        print!("{}", SetForegroundColor(Color::Blue));
+        // print!("{}", SetForegroundColor(Color::Blue));
         println!("{}\r", welcome_message);
-        // 重置颜色
-        print!("{}", ResetColor);
+        // // 重置颜色
+        // print!("{}", ResetColor);
         // 打印 Rust 螃蟹图案
         // let crab_art = r#"
         //     _~^~^~_
