@@ -1,4 +1,4 @@
-# Hecto-texteditor-windows-edition
+# hecto-texteditor-windows-edition
 A Windows edition for the hecto text editor, based on [Philipp's tutorial edition](https://www.flenker.blog/hecto/). 
 
 Following the tutorial, I adapted the project for Windows using the crossterm crate (the original edition used termion for terminal interaction, now replaced by crossterm). 
