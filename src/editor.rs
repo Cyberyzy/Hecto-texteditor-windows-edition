@@ -210,22 +210,6 @@ impl Editor {
         self.highlighted_word = None;
     }
 
-    // fn process_mousepress(&mut self) -> Result<(), std::io::Error> {
-    //     let mouse_event = Terminal::read_mouse()?;
-    //     match mouse_event.kind {
-    //         MouseEventKind::Down(MouseButton::Left) => {
-    //             self.cursor_position = Position {
-    //                 x: mouse_event.column as usize,
-    //                 y: mouse_event.row as usize,
-    //             };
-    //             self.scroll();
-    //         }
-    //         _ => (), // 处理其他 MouseEventKind 的情况
-    //     }
-    //     Ok(())
-    // }
-    
-
     // fn process_keypress(&mut self) -> Result<(), std::io::Error> {
     //     let pressed_key = Terminal::read_key()?;
     //     match pressed_key {
@@ -512,16 +496,6 @@ impl Editor {
         // 设置颜色
         // print!("{}", SetForegroundColor(Color::Blue));
         println!("{}\r", welcome_message);
-        // // 重置颜色
-        // print!("{}", ResetColor);
-        // 打印 Rust 螃蟹图案
-        // let crab_art = r#"
-        //     _~^~^~_
-        // \) /  o o  \ (/
-        // '_   -   _'
-        // / '-----' \
-        // "#;
-        // println!("{}", crab_art);
         io::stdout().flush().unwrap();
     }
 
